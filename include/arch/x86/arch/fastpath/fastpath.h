@@ -19,7 +19,7 @@ fastpath_reply_cap_check(cap_t cap)
     return cap_capType_equals(cap, cap_reply_cap);
 }
 
-void slowpath(syscall_t syscall)
+void slowpath(syscall_t syscall, uint64_t stamp)
 NORETURN;
 
 void fastpath_call(word_t cptr, word_t r_msgInfo)

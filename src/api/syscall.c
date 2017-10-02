@@ -58,8 +58,10 @@ handleInterruptEntry(void)
     return EXCEPTION_NONE;
 }
 
+int do_get_restore_stamp=0;
+
 exception_t
-handleUnknownSyscall(word_t w)
+handleUnknownSyscall(word_t w, uint64_t save_endstamp)
 {
 #ifdef CONFIG_PRINTING
     if (w == SysDebugPutChar) {
@@ -75,8 +77,18 @@ handleUnknownSyscall(word_t w)
 #endif
 #ifdef CONFIG_DEBUG_BUILD
     if (w == SysDebugHalt) {
-        printf("Debug halt syscall from user thread %p\n", NODE_STATE(ksCurThread));
-        halt();
+//        printf("Debug halt syscall from user thread %p\n", NODE_STATE(ksCurThread));
+        word_t *ipcBuffer;
+
+        ipcBuffer = lookupIPCBuffer(false, NODE_STATE(ksCurThread));
+
+        setMR(NODE_STATE(ksCurThread), ipcBuffer, 5, (word_t)((save_endstamp >> 32) & 0xFFFFFFFF));
+        setMR(NODE_STATE(ksCurThread), ipcBuffer, 6, (word_t)((save_endstamp) & 0xFFFFFFFF));
+
+	do_get_restore_stamp = 1;
+	return EXCEPTION_NONE;
+
+//        halt();
     }
     if (w == SysDebugSnapshot) {
         printf("Debug snapshot syscall from user thread %p\n", NODE_STATE(ksCurThread));

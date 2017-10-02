@@ -43,7 +43,7 @@ fastpath_call(word_t cptr, word_t msgInfo)
      * saved fault. */
     if (unlikely(fastpath_mi_check(msgInfo) ||
                  fault_type != seL4_Fault_NullFault)) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 
     /* Lookup the cap */
@@ -52,7 +52,7 @@ fastpath_call(word_t cptr, word_t msgInfo)
     /* Check it's an endpoint */
     if (unlikely(!cap_capType_equals(ep_cap, cap_endpoint_cap) ||
                  !cap_endpoint_cap_get_capCanSend(ep_cap))) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 
     /* Get the endpoint address */
@@ -64,13 +64,13 @@ fastpath_call(word_t cptr, word_t msgInfo)
 
     /* Check that there's a thread waiting to receive */
     if (unlikely(endpoint_ptr_get_state(ep_ptr) != EPState_Recv)) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 
     /* ensure we are not single stepping the destination in ia32 */
 #if defined(CONFIG_HARDWARE_DEBUG_API) && defined(CONFIG_ARCH_IA32)
     if (dest->tcbArch.tcbContext.breakpointState.single_step_enabled) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 #endif
 
@@ -82,7 +82,7 @@ fastpath_call(word_t cptr, word_t msgInfo)
 
     /* Ensure that the destination has a valid VTable. */
     if (unlikely(! isValidVTableRoot_fp(newVTable))) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 
 #ifdef CONFIG_ARCH_AARCH32
@@ -101,30 +101,30 @@ fastpath_call(word_t cptr, word_t msgInfo)
 
     /* Ensure the destination has a higher/equal priority to us. */
     if (unlikely(dest->tcbPriority < NODE_STATE(ksCurThread)->tcbPriority)) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 
     /* Ensure that the endpoint has has grant rights so that we can
      * create the reply cap */
     if (unlikely(!cap_endpoint_cap_get_capCanGrant(ep_cap))) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 
 #ifdef CONFIG_ARCH_AARCH32
     if (unlikely(!pde_pde_invalid_get_stored_asid_valid(stored_hw_asid))) {
-        slowpath(SysCall);
-    }
+        slowpath(SysCall, 0);
+    }python string not empty
 #endif
 
     /* Ensure the original caller is in the current domain and can be scheduled directly. */
     if (unlikely(dest->tcbDomain != ksCurDomain && maxDom)) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 
 #if CONFIG_MAX_NUM_NODES > 1
     /* Ensure both threads have the same affinity */
     if (unlikely(NODE_STATE(ksCurThread)->tcbAffinity != dest->tcbAffinity)) {
-        slowpath(SysCall);
+        slowpath(SysCall, 0);
     }
 #endif
 
@@ -133,7 +133,6 @@ fastpath_call(word_t cptr, word_t msgInfo)
      *
      * At this stage, we have committed to performing the IPC.
      */
-
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
     ksKernelEntry.is_fastpath = true;
 #endif
@@ -203,7 +202,7 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
      * saved fault. */
     if (unlikely(fastpath_mi_check(msgInfo) ||
                  fault_type != seL4_Fault_NullFault)) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
     /* Lookup the cap */
@@ -213,13 +212,13 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
     /* Check it's an endpoint */
     if (unlikely(!cap_capType_equals(ep_cap, cap_endpoint_cap) ||
                  !cap_endpoint_cap_get_capCanReceive(ep_cap))) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
     /* Check there is nothing waiting on the notification */
     if (NODE_STATE(ksCurThread)->tcbBoundNotification &&
             notification_ptr_get_state(NODE_STATE(ksCurThread)->tcbBoundNotification) == NtfnState_Active) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
     /* Get the endpoint address */
@@ -227,14 +226,14 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
 
     /* Check that there's not a thread waiting to send */
     if (unlikely(endpoint_ptr_get_state(ep_ptr) == EPState_Send)) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
     /* Only reply if the reply cap is valid. */
     callerSlot = TCB_PTR_CTE_PTR(NODE_STATE(ksCurThread), tcbCaller);
     callerCap = callerSlot->cap;
     if (unlikely(!fastpath_reply_cap_check(callerCap))) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
     /* Determine who the caller is. */
@@ -243,7 +242,7 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
     /* ensure we are not single stepping the caller in ia32 */
 #if defined(CONFIG_HARDWARE_DEBUG_API) && defined(CONFIG_ARCH_IA32)
     if (caller->tcbArch.tcbContext.breakpointState.single_step_enabled) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 #endif
 
@@ -251,7 +250,7 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
        reply is generated instead. */
     fault_type = seL4_Fault_get_seL4_FaultType(caller->tcbFault);
     if (unlikely(fault_type != seL4_Fault_NullFault)) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
     /* Get destination thread.*/
@@ -262,7 +261,7 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
 
     /* Ensure that the destination has a valid MMU. */
     if (unlikely(! isValidVTableRoot_fp (newVTable))) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
 #ifdef CONFIG_ARCH_AARCH32
@@ -280,25 +279,25 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
 
     /* Ensure the original caller can be scheduled directly. */
     if (unlikely(caller->tcbPriority < NODE_STATE(ksCurThread)->tcbPriority)) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
 #ifdef CONFIG_ARCH_AARCH32
     /* Ensure the HWASID is valid. */
     if (unlikely(!pde_pde_invalid_get_stored_asid_valid(stored_hw_asid))) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 #endif
 
     /* Ensure the original caller is in the current domain and can be scheduled directly. */
     if (unlikely(caller->tcbDomain != ksCurDomain && maxDom)) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 
 #if CONFIG_MAX_NUM_NODES > 1
     /* Ensure both threads have the same affinity */
     if (unlikely(NODE_STATE(ksCurThread)->tcbAffinity != caller->tcbAffinity)) {
-        slowpath(SysReplyRecv);
+        slowpath(SysReplyRecv, 0);
     }
 #endif
 
@@ -307,7 +306,6 @@ fastpath_reply_recv(word_t cptr, word_t msgInfo)
      *
      * At this stage, we have committed to performing the IPC.
      */
-
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
     ksKernelEntry.is_fastpath = true;
 #endif

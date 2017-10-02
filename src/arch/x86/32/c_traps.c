@@ -106,6 +106,8 @@ static void NORETURN restore_vmx(void)
 }
 #endif
 
+extern int do_get_restore_stamp;
+
 void NORETURN VISIBLE restore_user_context(void);
 void NORETURN VISIBLE restore_user_context(void)
 {
@@ -152,6 +154,53 @@ void NORETURN VISIBLE restore_user_context(void)
 
     base = NODE_STATE(ksCurThread)->tcbIPCBuffer;
     x86_write_fs_base(base, SMP_TERNARY(getCurrentCPUIndex(), 0));
+
+	word_t *ipcBuffer;
+
+	ipcBuffer = lookupIPCBuffer(false, NODE_STATE(ksCurThread));
+
+
+
+	if (do_get_restore_stamp)
+	{
+	uint64_t restore_startstamp;
+		/*{
+			uint64_t rdstart, rdend, elapsed, total;
+			uint32_t min, max, avg;
+			min = max = avg = 0;
+			total = 0;
+		for (int i=0; i<1024; i++)
+		{
+			asm volatile ("rdtsc\n\t" : "=A" (rdstart));
+
+        		setMR(NODE_STATE(ksCurThread), ipcBuffer, 3, (word_t)((rdstart  >> 32) & 0xFFFFFFFF));
+        		setMR(NODE_STATE(ksCurThread), ipcBuffer, 4, (word_t)((rdstart) & 0xFFFFFFFF));
+    			if ((volatile word_t)(likely(NODE_STATE(ksCurThread)->tcbArch.tcbContext.registers[Error]) == -1)) {}
+			asm volatile ("rdtsc\n\t" : "=A" (rdend));
+
+			elapsed = rdend - rdstart;
+			total += elapsed;
+			if (min == 0 || elapsed < min) {
+				min = elapsed;
+			}
+			if (max < elapsed) {
+				max = elapsed;
+			}
+		}
+			avg = total / 1024;
+			printf("End of loop: Min %u, max %u, total cycles %lu_%lu.\n"
+				"\tAverage cycles %u.\n",
+				min, max,
+				(word_t)((total >> 32) & 0xFFFFFFFF),
+				(word_t)((total) & 0xFFFFFFFF),
+				avg);
+		} */
+
+		do_get_restore_stamp = 0;
+	asm volatile ("rdtsc\n\t" : "=A" (restore_startstamp));
+        setMR(NODE_STATE(ksCurThread), ipcBuffer, 3, (word_t)((restore_startstamp  >> 32) & 0xFFFFFFFF));
+        setMR(NODE_STATE(ksCurThread), ipcBuffer, 4, (word_t)((restore_startstamp) & 0xFFFFFFFF));
+	}
 
     /* see if we entered via syscall */
     if (likely(NODE_STATE(ksCurThread)->tcbArch.tcbContext.registers[Error] == -1)) {

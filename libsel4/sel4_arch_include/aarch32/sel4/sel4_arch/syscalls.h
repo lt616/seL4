@@ -163,6 +163,8 @@ arm_sys_send_recv(seL4_Word sys, seL4_Word dest, seL4_Word *out_badge, seL4_Word
     *in_out_mr3 = msg3;
 }
 
+
+
 static inline void
 arm_sys_null(seL4_Word sys)
 {

@@ -93,14 +93,14 @@ c_handle_interrupt(int irq, int syscall)
         ksKernelEntry.path = Entry_UnknownSyscall;
         ksKernelEntry.word = sys_num;
 #endif
-        handleUnknownSyscall(sys_num);
+        handleUnknownSyscall(sys_num, 0);
     }
     restore_user_context();
     UNREACHABLE();
 }
 
 void NORETURN
-slowpath(syscall_t syscall)
+slowpath(syscall_t syscall, uint64_t save_endstamp)
 {
 
 #ifdef CONFIG_VTX
@@ -125,7 +125,7 @@ slowpath(syscall_t syscall)
         ksKernelEntry.path = Entry_UnknownSyscall;
         /* ksKernelEntry.word word is already set to syscall */
 #endif /* TRACK_KERNEL_ENTRIES */
-        handleUnknownSyscall(syscall);
+        handleUnknownSyscall(syscall, save_endstamp);
     } else {
 #ifdef TRACK_KERNEL_ENTRIES
         ksKernelEntry.is_fastpath = 0;
@@ -140,6 +140,8 @@ slowpath(syscall_t syscall)
 void VISIBLE NORETURN
 c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t syscall)
 {
+	uint64_t save_endstamp;
+	asm volatile("rdtsc":"=A" (save_endstamp));
     NODE_LOCK_SYS;
 
     c_entry_hook();
@@ -166,7 +168,7 @@ c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t syscall)
         UNREACHABLE();
     }
 #endif /* CONFIG_FASTPATH */
-    slowpath(syscall);
+    slowpath(syscall, save_endstamp);
     UNREACHABLE();
 }
 
